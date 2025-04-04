@@ -2,7 +2,8 @@ import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler'
 import multer from 'multer'
 import { archiveDto } from '../schemas/archive.dto.type';
-import { addArchive } from '../services/archive.services';
+import { addArchive, unzipArchive } from '../services/archive.services';
+import { archiveUnzipDto } from '../schemas/archiveUnzip.dto';
 
 export const archiveRouter = express.Router();
 const upload = multer()
@@ -17,3 +18,14 @@ archiveRouter.route('/archive').post(upload.single('archive'),asyncHandler(async
     res.json({id: archiveId}).status(200)
 })
 )
+
+archiveRouter.route('/archive/unzip/:id').post(asyncHandler(async(req: Request, res: Response) => {
+    const result = archiveUnzipDto.safeParse(req.params)
+    if (!result.success){
+        res.json({error: 'The request is missing an archive id'}).status(400)
+        return
+    }
+    const { id } = result.data
+    await unzipArchive(id)
+    res.json({success: true}).status(200)
+}))

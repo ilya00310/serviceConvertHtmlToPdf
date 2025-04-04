@@ -6,16 +6,17 @@ import fs from 'fs'
 import fsp from 'fs/promises'
 import { PrismaClient } from "@prisma/client";
 import { ArchiveTable } from "../schemas/archiveTable.type";
+import unzipper from 'unzipper'
 
 const prisma = new PrismaClient()
 const enum Format {
     Archive = "archive",
-    File = "file"
+    Resource = "resource"
 }
 
 const formatFolderName: Record<Format, string> = {
     [Format.Archive] : 'archives',
-    [Format.File] : 'files'
+    [Format.Resource] : 'resources'
 }
 
 const getPathDownloadsFile =  (filename: string, format: Format) => { 
@@ -64,3 +65,37 @@ throw createError(500,'Archive wasn\'t added in the database')
 }
 }
 
+const extractZpi = (currentPathArchive: string, pathNewResource: string) => {
+
+    return new Promise((resolve, reject) =>{
+        const readStream = fs.createReadStream(currentPathArchive)
+
+        readStream.on('error', reject)
+
+        readStream
+        .pipe(unzipper.Extract({ path: pathNewResource}))
+        .on('error', reject)
+        .on('finish', resolve)
+    
+    })
+}
+
+export const unzipArchive = async(id : string) => {
+const currentArchive: ArchiveTable = await prisma.archive.findFirst({
+    where: {
+        id
+    }
+}) as ArchiveTable
+
+if (!currentArchive) throw createError(400, 'Archive with current id don\'t exist')
+
+const currentArchiveFormat: Format = Format.Archive;
+const currentArchivePath = await getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
+
+if (!existsSync(currentArchivePath)) throw createError(409, 'The archive don\t exists in the folder')
+
+const currentResourceFormat = Format.Resource
+const currentResourcePath = await getPathDownloadsFile(currentArchive.archiveName, currentResourceFormat)
+
+    await extractZpi(currentArchivePath, currentResourcePath)
+}

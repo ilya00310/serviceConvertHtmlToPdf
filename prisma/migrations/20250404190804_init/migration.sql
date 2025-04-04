@@ -2,7 +2,7 @@
 CREATE TABLE "Archive" (
     "id" TEXT NOT NULL,
     "archiveName" TEXT NOT NULL,
-    "SuccessUnzipping" BOOLEAN,
+    "successUnzipping" BOOLEAN,
 
     CONSTRAINT "Archive_pkey" PRIMARY KEY ("id")
 );
@@ -11,7 +11,7 @@ CREATE TABLE "Archive" (
 CREATE TABLE "File" (
     "id" TEXT NOT NULL,
     "archiveId" TEXT NOT NULL,
-    "SuccessConversion" BOOLEAN NOT NULL,
+    "successConversion" BOOLEAN NOT NULL,
 
     CONSTRAINT "File_pkey" PRIMARY KEY ("id")
 );
