@@ -1,6 +1,6 @@
 import express from 'express'
 import dotenv from "dotenv";
-import { archiveRouter } from './routers/archive.routers.js';
+import { archiveRouter } from './routers/archive.routers';
 
 dotenv.config();
 const app = express();
