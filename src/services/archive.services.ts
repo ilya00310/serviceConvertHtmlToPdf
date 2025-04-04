@@ -1,20 +1,66 @@
-import { Archive } from "../schemas/archive.dto";
-import path from 'path'
+import { Archive } from "../schemas/archive.dto.type";
+import path, { resolve } from 'path'
 import { existsSync } from "fs"
 import createError from "http-errors"
+import fs from 'fs'
+import fsp from 'fs/promises'
+import { PrismaClient } from "@prisma/client";
+import { ArchiveTable } from "../schemas/archiveTable.type";
 
-enum format {
-    archive = "archive",
-    file = "file"
+const prisma = new PrismaClient()
+const enum Format {
+    Archive = "archive",
+    File = "file"
 }
-const getPath =  (filename: string, format: string) => path.join(process.cwd(),`${format}s`, filename)
 
+const formatFolderName: Record<Format, string> = {
+    [Format.Archive] : 'archives',
+    [Format.File] : 'files'
+}
 
-export const addArchive = (archiveData: Archive) => {
+const getPathDownloadsFile =  (filename: string, format: Format) => { 
+    const folder = formatFolderName[format]
+  return path.join(process.cwd(),'downloads',folder, filename)
+
+}
+
+const checkMaxSize = (size: number) => {
+    const maxSize = 2 * 1024 * 1024 * 1024;
+    if (size > maxSize) throw createError(400, `Size exceeds maximum limit: ${maxSize}`)
+    
+}
+
+const addFileInFolder = async (filePath : string, buffer: Buffer) => {
+ try {
+    await fsp.writeFile(filePath, buffer)
+}catch{
+    throw createError(500, 'Archive wasn\'t added in the file system') 
+}
+}
+
+const addArchiveInDb = async (archiveName: string): Promise<string> => {
+const { id } = await prisma.archive.create({
+    data: { archiveName }
+})
+return id
+}
+
+const deleteFile = async (filePath: string) => await fsp.rm(filePath);
+
+export const addArchive = async (archiveData: Archive) => {
 const { originalname, buffer, size }= archiveData;
-const currentFormat = format.archive;
-const archivePath = getPath(originalname, currentFormat)
-if (existsSync(archivePath)){
-    throw createError(409, 'The archive already exists in the folder')
+const currentFormat: Format = Format.Archive;
+const currentArchivePath = getPathDownloadsFile(originalname, currentFormat)
+if (existsSync(currentArchivePath)) throw createError(409, 'The archive already exists in the folder')
+
+checkMaxSize(size)
+await addFileInFolder(currentArchivePath, buffer)
+try {
+const archiveId: string = await addArchiveInDb(originalname)
+return archiveId
+}catch{
+await deleteFile(currentArchivePath)
+throw createError(500,'Archive wasn\'t added in the database')
 }
 }
+

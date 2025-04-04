@@ -1,8 +1,7 @@
-import express, { Request, Response, Express } from 'express';
+import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler'
-import createError from 'http-errors';
 import multer from 'multer'
-import { archiveDto } from '../schemas/archive.dto';
+import { archiveDto } from '../schemas/archive.dto.type';
 import { addArchive } from '../services/archive.services';
 
 export const archiveRouter = express.Router();
@@ -15,7 +14,6 @@ archiveRouter.route('/archive').post(upload.single('archive'),asyncHandler(async
         return
     }
     const archiveId = await addArchive(result.data)
-    // res.json({id: archiveId}).status(200)
-
+    res.json({id: archiveId}).status(200)
 })
 )

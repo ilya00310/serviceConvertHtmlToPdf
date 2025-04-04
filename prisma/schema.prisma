@@ -10,7 +10,7 @@ datasource db {
 model Archive {
 id                    String      @id     @default(uuid())
 archiveName           String
-SuccessUnzipping      Boolean?
+successUnzipping      Boolean?
 files                 File[]
 }
 
@@ -18,5 +18,5 @@ model File {
 id                    String      @id     @default(uuid())
 archive               Archive     @relation(fields: [archiveId], references: [id])
 archiveId             String
-SuccessConversion     Boolean 
+successConversion     Boolean 
 }
