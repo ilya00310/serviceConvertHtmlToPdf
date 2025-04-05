@@ -5,10 +5,59 @@ import { addArchive, unzipArchive } from '../services/archive.services';
 import { idDto } from '../schemas/archiveUnzip.dto';
 import { upload } from '../services/archive.services';
 import { SafeParseReturnType } from 'zod';
-import { Archive } from '@prisma/client';
+
+/**
+ * @swagger
+ * components:
+ *  schemas:
+ *      Archive:
+ *          type: object
+ *          required:
+ *              - archiveName
+ *              - isUnzipping
+ *          properties:
+ *            id:
+ *              type: string
+ *              description: The auto-generated id of the archive    
+ *            archiveName:
+ *              type: string
+ *              description: The name current archive
+ *            isUnzipping:
+ *              type: boolean
+ *              description: Success of the unzipping
+ *          example:
+ *              id: d123f_ds
+ *              archiveName: archiveOne
+ *              isUnzipping: false
+ */
+
 export const archiveRouter = express.Router();
 
-
+/**
+ * @swagger
+ * /api/archive:
+ *   post:
+ *     summary: Download zip archive
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - in: formData
+ *         name: archive
+ *         type: file
+ *         required: true
+ *         description: The archive to upload
+ *     responses:
+ *       200:
+ *         description: Id new archive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 archiveId:
+ *                   type: string
+ *                   example: 's21323_dsa'
+*/
 archiveRouter.route('').post(upload.single('archive'),asyncHandler(async(req: Request, res: Response) => {
     const result = archiveDto.safeParse(req.file)
     if (!result.success){
@@ -21,6 +70,30 @@ archiveRouter.route('').post(upload.single('archive'),asyncHandler(async(req: Re
 })
 )
 
+
+/**
+ * @swagger
+ * /api/archive/unzip/{id}:
+ *   post:
+ *     summary: Unzip archive
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         type: string
+ *         required: true
+ *         description: Id for unzip archive
+ *     responses:
+ *       200:
+ *         description: Id new file html
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 fileHtmlId:
+ *                   type: string
+ *                   example: 's21323_dsa'
+*/
 archiveRouter.route('/unzip/:id').post(asyncHandler(async(req: Request, res: Response) => {
     const result: SafeParseReturnType<{id: string}, {id: string}> = idDto.safeParse(req.params)
     if (!result.success){
