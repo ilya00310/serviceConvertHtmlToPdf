@@ -11,12 +11,14 @@ model Archive {
 id                    String      @id     @default(uuid())
 archiveName           String
 successUnzipping      Boolean?
-files                 File[]
+file                 FileHtml?
 }
 
-model File {
+model FileHtml {
 id                    String      @id     @default(uuid())
 archive               Archive     @relation(fields: [archiveId], references: [id])
-archiveId             String
-successConversion     Boolean 
+archiveId             String      @unique
+filename              String
+successConversion     Boolean? 
 }
+
