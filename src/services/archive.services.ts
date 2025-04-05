@@ -7,6 +7,17 @@ import fsp from 'fs/promises'
 import { PrismaClient } from "@prisma/client";
 import { ArchiveTable } from "../schemas/archiveTable.type";
 import unzipper from 'unzipper'
+import multer from 'multer'
+
+
+const maxArchiveSize = 2 * 1024 * 1024 * 1024;
+
+export const upload = multer({
+    limits: {
+        fileSize: maxArchiveSize
+    }
+})
+
 
 const prisma = new PrismaClient()
 
@@ -25,15 +36,10 @@ const formatFolderName: Record<Format, string> = {
 }
 
 
-const maxArchiveSize = 2 * 1024 * 1024 * 1024;
 
 const getPathDownloadsFile =  (filename: string, format: Format): string => { 
     const folder: string = formatFolderName[format]
     return path.join(process.cwd(),'downloads',folder, filename)
-}
-
-const checkItemMaxSize = (size: number, maxSize: number) => {
-    if (size > maxSize) throw createError(400, `Size exceeds maximum limit: ${maxSize}`)
 }
 
 const checkArchiveExtension = (archiveName: string) => {
@@ -59,12 +65,11 @@ const addArchiveInDb = async (archiveName: string): Promise<string> => {
 const deleteFile = async (filePath: string) => await fsp.rm(filePath);
 
 export const addArchive = async (archiveData: Archive) => {
-    const { originalname, buffer, size }= archiveData;
+    const { originalname, buffer }= archiveData;
     const currentFormat: Format = Format.Archive;
     const currentArchivePath = getPathDownloadsFile(originalname, currentFormat)
     
     if (existsSync(currentArchivePath)) throw createError(409, 'The archive already exists in the folder')
-        checkItemMaxSize(size, maxArchiveSize)
     checkArchiveExtension(originalname)
     await addFileInFolder(currentArchivePath, buffer)
     
