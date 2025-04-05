@@ -8,6 +8,7 @@ import { PrismaClient } from "@prisma/client";
 import { ArchiveTable } from "../schemas/archiveTable.type";
 import unzipper from 'unzipper'
 import multer from 'multer'
+import { error } from "console";
 
 
 const maxArchiveSize = 2 * 1024 * 1024 * 1024;
@@ -96,37 +97,11 @@ const extractZpi = (currentPathArchive: string, pathNewResource: string): Promis
     
     })
 }
-const addFileHtmlInDb = async (currentHtmlFilename: string, archiveId: string ): Promise<string> => {
-    try {
-        const newFile = await prisma.fileHtml.create({
-            data: {
-                archiveId,
-                filename: currentHtmlFilename,
-            }
-        })
-        return newFile.id
-    }catch(error){
-        if (error instanceof Error) throw new Error(`Html File was not added in the database: ${error.message}`)
-            else throw new Error(`Html File was not added in the database: ${error}`)
-    }
-}
 
 const removeItem = async(itemPath: string) => await fsp.rm(itemPath, {recursive: true})
 
 const errorHandlerAddFileHtmlInDb = async (fileHtmlPath: string) => {
     await removeItem(fileHtmlPath)
-}
-
-const indicateSuccessUnzippingInDb = async(id: string) => {
-    try {
-    await prisma.archive.update({
-    where:{ id }, 
-    data:{ isUnzipping: true }
-}) 
-}catch(error){
-    if (error instanceof Error) throw new Error(`The success of the unzipping was not indicated in isUnzipping: ${error.message}`)
-        else throw new Error(`The success of the unzipping was not indicated in isUnzipping: ${error}`)
-    }
 }
 
 export const unzipArchive = async(id : string): Promise<string> => {
@@ -148,17 +123,24 @@ export const unzipArchive = async(id : string): Promise<string> => {
             const currentHtmlFilePath = path.join(currentResourcePath, currentHtmlFilename)
             
             if (!existsSync(currentHtmlFilePath)) throw createError(404, `Html file: ${currentHtmlFilePath} do not exist `)
-              
-            return prisma.$transaction(async () => {
-                try { 
-                    const fileHtmlId =  await addFileHtmlInDb(currentHtmlFilename,id)
-                    await indicateSuccessUnzippingInDb(id)
-                    return fileHtmlId
+          const updateDbForCompletionAddFileHtml = prisma.$transaction(async (tx) => {
+            try {
+                    const newFileHtml = await tx.fileHtml.create({
+                        data: {
+                            archiveId: id,
+                            filename: currentHtmlFilename,
+                        }
+                    })
+                    const updateSuccessUnzippingInDb = await tx.archive.update({
+                        where:{ id }, 
+                        data:{ isUnzipping: true }
+                    })  
+                    return newFileHtml.id
                 }catch(transactionError){
-                    await errorHandlerAddFileHtmlInDb(currentHtmlFilePath)
+                    await errorHandlerAddFileHtmlInDb(currentResourcePath)
                     if (transactionError instanceof Error) throw createError(500,`Transaction failed: ${transactionError.message}`)
                         else throw createError(500, `Transaction failed: ${transactionError}`)            
-                }                    
+                }    
             })
-
+            return updateDbForCompletionAddFileHtml
 }
