@@ -44,14 +44,14 @@ const getPathDownloadsFile =  (filename: string, format: Format): string => {
 
 const checkArchiveExtension = (archiveName: string) => {
     const [filename, fileExtension] = archiveName.split('.');
-    if (fileExtension !== 'zip') throw createError(400, 'The extension doesn\'t match the zip archive')
+    if (fileExtension !== 'zip') throw createError(400, 'The extension does not match the zip archive')
     }
 
 const addFileInFolder = async (filePath : string, buffer: Buffer) => {
  try {
     await fsp.writeFile(filePath, buffer)
 }catch{
-    throw createError(500, 'Archive wasn\'t added in the file system') 
+    throw createError(500, 'Archive was not added in the file system') 
 }
 }
 
@@ -78,7 +78,7 @@ export const addArchive = async (archiveData: Archive) => {
         return archiveId
     }catch{
         await deleteFile(currentArchivePath)
-        throw createError(500,'Archive wasn\'t added in the database')
+        throw createError(500,'Archive was not added in the database')
     }
 }
 
@@ -97,6 +97,7 @@ const extractZpi = (currentPathArchive: string, pathNewResource: string): Promis
     })
 }
 const addFileHtmlInDb = async (currentHtmlFilename: string, archiveId: string ): Promise<string> => {
+    try {
         const newFile = await prisma.fileHtml.create({
             data: {
                 archiveId,
@@ -104,6 +105,10 @@ const addFileHtmlInDb = async (currentHtmlFilename: string, archiveId: string ):
             }
         })
         return newFile.id
+    }catch(error){
+        if (error instanceof Error) throw new Error(`Html File was not added in the database: ${error.message}`)
+            else throw new Error(`Html File was not added in the database: ${error}`)
+    }
 }
 
 const removeItem = async(itemPath: string) => await fsp.rm(itemPath, {recursive: true})
@@ -112,16 +117,28 @@ const errorHandlerAddFileHtmlInDb = async (fileHtmlPath: string) => {
     await removeItem(fileHtmlPath)
 }
 
+const indicateSuccessUnzippingInDb = async(id: string) => {
+    try {
+    await prisma.archive.update({
+    where:{ id }, 
+    data:{ isUnzipping: true }
+}) 
+}catch(error){
+    if (error instanceof Error) throw new Error(`The success of the unzipping was not indicated in isUnzipping: ${error.message}`)
+        else throw new Error(`The success of the unzipping was not indicated in isUnzipping: ${error}`)
+    }
+}
+
 export const unzipArchive = async(id : string): Promise<string> => {
     const currentArchive: ArchiveTable = await prisma.archive.findFirst({
         where: { id }
     }) as ArchiveTable
 
-    if (!currentArchive) throw createError(400, 'Archive with current id don\'t exist')
+    if (!currentArchive) throw createError(400, 'Archive with current id do not exist')
         const currentArchiveFormat: Format = Format.Archive;
         const currentArchivePath = await getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
 
-        if (!existsSync(currentArchivePath)) throw createError(409, 'The archive don\t exists in the folder')
+        if (!existsSync(currentArchivePath)) throw createError(409, 'The archive do not exists in the folder')
             const currentResourceFormat = Format.Resource
             const currentResourcePath = await getPathDownloadsFile(currentArchive.archiveName, currentResourceFormat)
 
@@ -130,12 +147,18 @@ export const unzipArchive = async(id : string): Promise<string> => {
             const currentHtmlFilename = FilenameHtml.index;
             const currentHtmlFilePath = path.join(currentResourcePath, currentHtmlFilename)
             
-            if (!existsSync(currentHtmlFilePath)) throw createError(404, `Html file: ${currentHtmlFilePath} don\'t exist `)
-                try {
-                const fileHtmlId =  await addFileHtmlInDb(currentHtmlFilename,  id)
-                return fileHtmlId
-                }catch{
+            if (!existsSync(currentHtmlFilePath)) throw createError(404, `Html file: ${currentHtmlFilePath} do not exist `)
+              
+            return prisma.$transaction(async () => {
+                try { 
+                    const fileHtmlId =  await addFileHtmlInDb(currentHtmlFilename,id)
+                    await indicateSuccessUnzippingInDb(id)
+                    return fileHtmlId
+                }catch(transactionError){
                     await errorHandlerAddFileHtmlInDb(currentHtmlFilePath)
-                    throw createError(500, 'Html File wasn\'t added in the database')            
-                }
+                    if (transactionError instanceof Error) throw createError(500,`Transaction failed: ${transactionError.message}`)
+                        else throw createError(500, `Transaction failed: ${transactionError}`)            
+                }                    
+            })
+
 }

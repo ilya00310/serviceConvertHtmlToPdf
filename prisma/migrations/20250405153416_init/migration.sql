@@ -2,7 +2,7 @@
 CREATE TABLE "Archive" (
     "id" TEXT NOT NULL,
     "archiveName" TEXT NOT NULL,
-    "successUnzipping" BOOLEAN,
+    "isUnzipping" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "Archive_pkey" PRIMARY KEY ("id")
 );
@@ -12,7 +12,7 @@ CREATE TABLE "FileHtml" (
     "id" TEXT NOT NULL,
     "archiveId" TEXT NOT NULL,
     "filename" TEXT NOT NULL,
-    "successConversion" BOOLEAN,
+    "isConversion" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "FileHtml_pkey" PRIMARY KEY ("id")
 );

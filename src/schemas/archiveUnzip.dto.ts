@@ -1,5 +1,5 @@
 import z from 'zod'
 
-export const archiveUnzipDto = z.object({
+export const idDto = z.object({
 id: z.string()
 })
