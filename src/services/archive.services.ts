@@ -6,19 +6,11 @@ import fsp from 'fs/promises'
 import { PrismaClient } from "@prisma/client";
 import { ArchiveTable } from "../schemas/archiveTable.type";
 import unzipper from 'unzipper'
-import multer from 'multer'
 import { FileHtmlTable } from "../schemas/fileHtml.type";
 import { Archive } from '../schemas/archive.dto.type'
 
 
-const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
-
-export const upload: multer.Multer = multer({
-    limits: {
-        fileSize: maxArchiveSize
-    }
-})
-
+export const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
 
 const prisma = new PrismaClient()
 

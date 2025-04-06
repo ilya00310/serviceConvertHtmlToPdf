@@ -11,4 +11,5 @@ export const convertHtmlToPdf = async (id: string) => {
         where: { id }
     }) as FileHtmlTable
     if (!currentHtmlFile) throw createError(400, 'Html file with current id do not exist')
+        
 }

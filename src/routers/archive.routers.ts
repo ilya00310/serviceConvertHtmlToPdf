@@ -1,10 +1,17 @@
 import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler'
 import { archiveDto } from '../schemas/archive.dto.type';
-import { addArchive, unzipArchive } from '../services/archive.services';
+import { addArchive, unzipArchive, maxArchiveSize } from '../services/archive.services';
 import { idDto } from '../schemas/archiveUnzip.dto';
-import { upload } from '../services/archive.services';
 import { SafeParseReturnType } from 'zod';
+import multer from 'multer'
+
+ const upload: multer.Multer = multer({
+    limits: {
+        fileSize: maxArchiveSize
+    }
+})
+
 
 /**
  * @swagger
