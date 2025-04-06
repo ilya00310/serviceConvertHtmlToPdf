@@ -14,25 +14,25 @@ export const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
 
 const prisma = new PrismaClient()
 
-const enum Format {
+export const enum Format {
     Archive = "archive",
     Resource = "resource"
 }
 
-const enum FilenameHtml {
+export const enum FilenameHtml {
     index = 'index.html'
 }
 
-const formatFolderName: Record<Format, string> = {
+export const formatFolderName: Record<Format, string> = {
     [Format.Archive] : 'archives',
     [Format.Resource] : 'resources'
 }
 
 
 
-const getPathDownloadsFile =  (filename: string, format: Format): string => { 
-    const folder: string = formatFolderName[format]
-    return path.join(process.cwd(),'downloads',folder, filename)
+export const getPathDownloadsFile =  (filename: string, format: Format, folderNameResources?: string | undefined): string => { 
+    const foldersPath: string = folderNameResources ? path.join(formatFolderName[format], folderNameResources) : formatFolderName[format]
+    return path.join(process.cwd(),'downloads',foldersPath,filename)
 }
 
 const checkArchiveExtension = (archiveName: string) => {
@@ -55,7 +55,13 @@ const addArchiveInDb = async (archiveName: string): Promise<string> => {
     return id
 }
 
-const deleteFile = async (filePath: string) => await fsp.rm(filePath);
+const deleteFile = async (filePath: string): Promise<void> => {
+    try{
+    await fsp.rm(filePath);
+    }catch(err){
+        throw new Error(`Error`)
+    }
+}
 
 export const addArchive = async (archiveData: Archive) => {
     const { originalname, buffer }= archiveData;
@@ -67,15 +73,14 @@ export const addArchive = async (archiveData: Archive) => {
     await addFileInFolder(currentArchivePath, buffer)
     
     try {
-        const archiveId: string = await addArchiveInDb(originalname)
-        return archiveId
+        return await addArchiveInDb(originalname)
     }catch{
         await deleteFile(currentArchivePath)
         throw createError(500,'Archive was not added in the database')
     }
 }
 
-const extractZpi = (currentPathArchive: string, pathNewResource: string): Promise<void> => {
+const extractZpi = (currentPathArchive: string, currentResourcePath: string): Promise<void> => {
 
     return new Promise((resolve, reject) =>{
         const readStream = fs.createReadStream(currentPathArchive)
@@ -83,33 +88,47 @@ const extractZpi = (currentPathArchive: string, pathNewResource: string): Promis
         readStream.on('error', reject)
 
         readStream
-        .pipe(unzipper.Extract({ path: pathNewResource}))
+        .pipe(unzipper.Extract({ path: currentResourcePath}))
         .on('error', reject)
         .on('finish', resolve)
     
     })
 }
 
-const removeItem = async(itemPath: string): Promise<void> => await fsp.rm(itemPath, {recursive: true})
-
-const errorHandlerAddFileHtmlInDb = async (fileHtmlPath: string): Promise<void> => {
-    await removeItem(fileHtmlPath)
+export const removeItem = async(itemPath: string): Promise<void> =>  {
+   try { 
+    await fsp.rm(itemPath, {recursive: true})
+   }catch(error) {
+    if (error instanceof Error) throw new Error(`Error with delete file: ${error.message}`)
+        else throw new Error(`Error with delete file: ${error}`)
+   }
 }
 
+const errorHandlerAddFileHtmlInDb = async (filePath: string): Promise<void> => {
+    try {
+    await removeItem(filePath)
+    }catch(error){
+        if (error instanceof Error) throw createError(`Error with error handler: ${error.message}`)
+            else throw createError(`Error with error handler: ${error}`)
+    }
+}
+export const getFileNameWithoutExtension = (fileNameWithExtension: string): string => {
+    const [fileName, extension] = fileNameWithExtension.split('.')
+    return fileName
+}
 export const unzipArchive = async(id : string): Promise<string> => {
     const currentArchive: ArchiveTable = await prisma.archive.findUnique({
         where: { id }
     }) as ArchiveTable
-
     if (!currentArchive) throw createError(400, 'Archive with current id do not exist')
-        
+
         const currentArchiveFormat: Format = Format.Archive;
-        const currentArchivePath: string = await getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
+        const currentArchivePath: string = getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
 
         if (!existsSync(currentArchivePath)) throw createError(409, 'The archive do not exists in the folder')
-            
+            const nameNewFolderForUnzip = getFileNameWithoutExtension(currentArchive.archiveName)            
             const currentResourceFormat: Format = Format.Resource
-            const currentResourcePath: string = await getPathDownloadsFile(currentArchive.archiveName, currentResourceFormat)
+            const currentResourcePath: string = await getPathDownloadsFile(nameNewFolderForUnzip, currentResourceFormat)
 
             if (existsSync(currentResourcePath)) throw createError(409, 'The resource folder already exist')
 
@@ -119,7 +138,7 @@ export const unzipArchive = async(id : string): Promise<string> => {
             
             if (!existsSync(currentHtmlFilePath)) throw createError(404, `Html file: ${currentHtmlFilePath} do not exist `)
 
-          const updateDbForCompletionAddFileHtml: Promise<string> = prisma.$transaction(async (tx) => {
+          return prisma.$transaction(async (tx) => {
             try {
                     const newFileHtml: FileHtmlTable = await tx.fileHtml.create({
                         data: {
@@ -138,5 +157,4 @@ export const unzipArchive = async(id : string): Promise<string> => {
                         else throw createError(500, `Transaction failed: ${transactionError}`)            
                 }    
             })
-            return updateDbForCompletionAddFileHtml
 }

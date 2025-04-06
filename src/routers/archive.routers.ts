@@ -71,7 +71,6 @@ archiveRouter.route('').post(upload.single('archive'),asyncHandler(async(req: Re
         res.status(400).json({error: 'The request is missing an archive file'})
         return
     }
-    console.log(result.data)
     const archiveId = await addArchive(result.data)
     res.json({archiveId}).status(200)
 })
