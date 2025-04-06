@@ -1,4 +1,3 @@
-import { Archive } from "../schemas/archive.dto.type";
 import path from 'path'
 import { existsSync } from "fs"
 import createError from "http-errors"
@@ -8,12 +7,13 @@ import { PrismaClient } from "@prisma/client";
 import { ArchiveTable } from "../schemas/archiveTable.type";
 import unzipper from 'unzipper'
 import multer from 'multer'
-import { error } from "console";
+import { FileHtmlTable } from "../schemas/fileHtml.type";
+import { Archive } from '../schemas/archive.dto.type'
 
 
-const maxArchiveSize = 2 * 1024 * 1024 * 1024;
+const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
 
-export const upload = multer({
+export const upload: multer.Multer = multer({
     limits: {
         fileSize: maxArchiveSize
     }
@@ -68,7 +68,7 @@ const deleteFile = async (filePath: string) => await fsp.rm(filePath);
 export const addArchive = async (archiveData: Archive) => {
     const { originalname, buffer }= archiveData;
     const currentFormat: Format = Format.Archive;
-    const currentArchivePath = getPathDownloadsFile(originalname, currentFormat)
+    const currentArchivePath: string = getPathDownloadsFile(originalname, currentFormat)
     
     if (existsSync(currentArchivePath)) throw createError(409, 'The archive already exists in the folder')
     checkArchiveExtension(originalname)
@@ -98,43 +98,47 @@ const extractZpi = (currentPathArchive: string, pathNewResource: string): Promis
     })
 }
 
-const removeItem = async(itemPath: string) => await fsp.rm(itemPath, {recursive: true})
+const removeItem = async(itemPath: string): Promise<void> => await fsp.rm(itemPath, {recursive: true})
 
-const errorHandlerAddFileHtmlInDb = async (fileHtmlPath: string) => {
+const errorHandlerAddFileHtmlInDb = async (fileHtmlPath: string): Promise<void> => {
     await removeItem(fileHtmlPath)
 }
 
 export const unzipArchive = async(id : string): Promise<string> => {
-    const currentArchive: ArchiveTable = await prisma.archive.findFirst({
+    const currentArchive: ArchiveTable = await prisma.archive.findUnique({
         where: { id }
     }) as ArchiveTable
 
     if (!currentArchive) throw createError(400, 'Archive with current id do not exist')
+        
         const currentArchiveFormat: Format = Format.Archive;
-        const currentArchivePath = await getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
+        const currentArchivePath: string = await getPathDownloadsFile(currentArchive.archiveName, currentArchiveFormat)
 
         if (!existsSync(currentArchivePath)) throw createError(409, 'The archive do not exists in the folder')
-            const currentResourceFormat = Format.Resource
-            const currentResourcePath = await getPathDownloadsFile(currentArchive.archiveName, currentResourceFormat)
+            
+            const currentResourceFormat: Format = Format.Resource
+            const currentResourcePath: string = await getPathDownloadsFile(currentArchive.archiveName, currentResourceFormat)
 
             if (existsSync(currentResourcePath)) throw createError(409, 'The resource folder already exist')
+
                 await extractZpi(currentArchivePath, currentResourcePath)
-            const currentHtmlFilename = FilenameHtml.index;
-            const currentHtmlFilePath = path.join(currentResourcePath, currentHtmlFilename)
+            const currentHtmlFilename: FilenameHtml = FilenameHtml.index;
+            const currentHtmlFilePath: string = path.join(currentResourcePath, currentHtmlFilename)
             
             if (!existsSync(currentHtmlFilePath)) throw createError(404, `Html file: ${currentHtmlFilePath} do not exist `)
-          const updateDbForCompletionAddFileHtml = prisma.$transaction(async (tx) => {
+
+          const updateDbForCompletionAddFileHtml: Promise<string> = prisma.$transaction(async (tx) => {
             try {
-                    const newFileHtml = await tx.fileHtml.create({
+                    const newFileHtml: FileHtmlTable = await tx.fileHtml.create({
                         data: {
                             archiveId: id,
                             filename: currentHtmlFilename,
                         }
-                    })
-                    const updateSuccessUnzippingInDb = await tx.archive.update({
+                    }) as FileHtmlTable
+                    const updateSuccessUnzippingInDb: ArchiveTable = await tx.archive.update({
                         where:{ id }, 
                         data:{ isUnzipping: true }
-                    })  
+                    }) as ArchiveTable
                     return newFileHtml.id
                 }catch(transactionError){
                     await errorHandlerAddFileHtmlInDb(currentResourcePath)
