@@ -28,29 +28,30 @@ const getArchiveNameWithoutExtension = async(archiveId: string): Promise<string>
 
 const generatePDF = async (htmlFilePath: string, outputPath: string): Promise<void> => {
     try {
-    const browser: Browser = await puppeteer.launch({
-      executablePath: '/usr/bin/chromium-browser',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'], 
-    });
+        const browser: Browser = await puppeteer.launch({
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+            headless: true
+        });
   
-    const page = await browser.newPage();
+        const page = await browser.newPage();
   
-    const fileUrl: string = `file://${htmlFilePath}`;
-    await page.goto(fileUrl, {
-      waitUntil: 'networkidle0',
-    });
+        const fileUrl: string = `file://${htmlFilePath}`;
+        await page.goto(fileUrl, {
+            waitUntil: 'networkidle0',
+        });
   
-    await page.pdf({ 
-      path: outputPath,
-      format: 'A4',
-    });
+        await page.pdf({ 
+            path: outputPath,
+            format: 'A4',
+        });
 
-    await browser.close();
-}catch(error) {
-    if (error instanceof Error) throw createError(500,`Error with generate pdf: ${error.message}`)
-        else throw createError(500, `Error with generate pdf: ${error}`)  
-}
-  };
+        await browser.close();
+    } catch(error) {
+        if (error instanceof Error) throw createError(500, `Error with generate pdf: ${error.message}`);
+        else throw createError(500, `Error with generate pdf: ${error}`);
+    }
+};
 
   const changeExtensionFile = (currentFileName : string, newExtension: Extension): string => {
     const [filename, extension] = currentFileName.split('.');

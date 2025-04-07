@@ -73,9 +73,7 @@ pdfConversionLogRouter.route('').get(asyncHandler(async (req: Request,res: Respo
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               items:
- *                 $ref: '#/components/schemas/PdfConversionLog'
+ *              $ref: '#/components/schemas/PdfConversionLog'
  */
 pdfConversionLogRouter.route('/:id').get(asyncHandler(async (req: Request,res: Response) => {
     const result: SafeParseReturnType<{id: string}, {id: string}> = idDto.safeParse(req.params)

@@ -19,7 +19,7 @@ const swaggerOptions = {
         },
         servers: [ { url: process.env.SERVER_URL } ],
     },
-    apis: ['./src/routers/archive.routers.ts','./src/routers/fileHtml.routers.ts','./src/pdfConversionLog/.routers.ts']
+    apis: ['./src/routers/archive.routers.ts','./src/routers/fileHtml.routers.ts','./src/routers/pdfConversionLog.routers.ts']
 }
 const swaggerDocs = swaggerJsDoc(swaggerOptions)
 
