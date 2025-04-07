@@ -94,7 +94,7 @@ const generatePDF = async (htmlFilePath: string, outputPath: string): Promise<vo
 }
 
 
-export const convertHtmlToPdf = async (id: string): Promise<void> => {
+export const convertHtmlToPdf = async (id: string): Promise<string> => {
     const currentHtmlFile: FileHtmlTable | null = await prisma.fileHtml.findFirst({
         where: { id }
     }) 
@@ -125,6 +125,7 @@ export const convertHtmlToPdf = async (id: string): Promise<void> => {
             try {
                 await updateSuccessConversionInDb(id, nameNewPdfFile)
                 await removeItem(currentHtmlPath)
+                return logId
             }catch(error){
                 await errorHandlerAfterGeneratePdf(currentNewPdfPath, currentHtmlFile.fileName,id, logId )
                 if (error instanceof Error) throw createError(500,`Error after generate pdf: ${error.message}`)

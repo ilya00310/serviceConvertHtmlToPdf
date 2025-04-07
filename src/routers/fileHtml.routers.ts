@@ -47,15 +47,15 @@ export const fileHtmlRouter = express()
  *         description: Id for conversion file html
  *     responses:
  *       200:
- *         description: Removal success
+ *         description: Id pdf conversion log 
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
+ *                 pdfConversionLogId:
+ *                   type: string
+ *                   example: dsdfs_adas321
  */
 fileHtmlRouter.route('/conversion/:id').post(asyncHandler(async (req: Request,res: Response) => {
     const result: SafeParseReturnType<{id: string}, {id: string}> = idDto.safeParse(req.params)
@@ -64,6 +64,6 @@ fileHtmlRouter.route('/conversion/:id').post(asyncHandler(async (req: Request,re
         return
     }
     const { id } = result.data;
-    await convertHtmlToPdf(id)
-    res.status(200).json({success: true})
+    const pdfConversionLogId:string = await convertHtmlToPdf(id)
+    res.status(200).json({pdfConversionLogId})
 }))

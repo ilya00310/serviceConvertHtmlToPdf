@@ -8,6 +8,7 @@ import { ArchiveTable } from "../schemas/archiveTable.type";
 import unzipper from 'unzipper'
 import { FileHtmlTable } from "../schemas/fileHtml.type";
 import { Archive } from '../schemas/archive.dto.type'
+import { execSync } from 'child_process';
 
 export const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
 
@@ -89,13 +90,21 @@ const extractZpi = (currentPathArchive: string, currentResourcePath: string): Pr
         readStream.on('error', reject)
 
         readStream
-        .pipe(unzipper.Extract({ path: currentResourcePath}))
+        .pipe(unzipper.Extract({ path: currentResourcePath }))
         .on('error', reject)
-        .on('finish', resolve)
-    
-    })
+        .on('finish', () => {
+            try {
+                execSync(`chmod -R 777 ${currentResourcePath}`);
+                if (process.env.DOCKER_MODE) {
+                    execSync(`chown -R node:node ${currentResourcePath}`);
+                }
+                resolve();
+            } catch (error) {
+                reject(error);
+            }    
+        })
+})
 }
-
 
 const errorHandlerAddFileHtmlInDb = async (filePath: string): Promise<void> => {
     try {

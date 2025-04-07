@@ -18,3 +18,7 @@ export const createLog = async (fileHtmlName: string, wastedTime: string,wastedM
 }
 
 export const getPdfConversionLogs = async (): Promise<PdfConversionLogTable[]> => await prima.pdfConversionLog.findMany()
+
+export const getPdfConversionLog = async (id: string): Promise<PdfConversionLogTable | null > => await prima.pdfConversionLog.findUnique({
+    where: { id }
+})

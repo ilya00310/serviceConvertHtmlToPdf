@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler'
 import { PdfConversionLogTable } from '../schemas/pdfConversionLog.type';
 import createError from 'http-errors'
-import { getPdfConversionLogs } from '../services/pdfConversionLog.services';
+import { getPdfConversionLog, getPdfConversionLogs } from '../services/pdfConversionLog.services';
+import { SafeParseReturnType } from 'zod';
+import { idDto } from '../schemas/archiveUnzip.dto';
 
 /**
  * @swagger
@@ -36,7 +38,7 @@ export const pdfConversionLogRouter = express()
 
 /**
  * @swagger
- * /appeals/filter:
+ * /api/pdfConversionLog:
  *   get:
  *     summary: Get pdf conversion logs
  *     responses:
@@ -52,4 +54,36 @@ export const pdfConversionLogRouter = express()
 pdfConversionLogRouter.route('').get(asyncHandler(async (req: Request,res: Response) => {
     const pdfConversionLogs: PdfConversionLogTable[] = await getPdfConversionLogs()
     res.status(200).json(pdfConversionLogs)
+}))
+
+/**
+ * @swagger
+ * /api/pdfConversionLog/{id}:
+ *   get:
+ *     summary: Get pdf conversion log
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         type: string
+ *         required: true
+ *         description: Id pdf conversion log
+ *     responses:
+ *       200:
+ *         description: Pdf conversion logs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               items:
+ *                 $ref: '#/components/schemas/PdfConversionLog'
+ */
+pdfConversionLogRouter.route('/:id').get(asyncHandler(async (req: Request,res: Response) => {
+    const result: SafeParseReturnType<{id: string}, {id: string}> = idDto.safeParse(req.params)
+    if (!result.success){
+        res.status(400).json({error: 'The request is missing an pdf conversion log id'})
+        return
+    }
+    const { id } = result.data;
+    const pdfConversionLog: PdfConversionLogTable | null = await getPdfConversionLog(id)
+    res.status(200).json({pdfConversionLog})
 }))
