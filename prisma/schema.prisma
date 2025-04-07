@@ -18,7 +18,17 @@ model FileHtml {
 id                    String      @id     @default(uuid())
 archive               Archive     @relation(fields: [archiveId], references: [id])
 archiveId             String      @unique
-filename              String
+fileName              String      @unique
 isConversion          Boolean             @default(false)
+log                   PdfConversionLog[]
+}
+
+model PdfConversionLog {
+id                    String      @id     @default(uuid())
+fileHtml              FileHtml    @relation(fields: [fileHtmlName], references: [fileName])
+fileHtmlName          String      
+wastedTime            String?
+wastedMemory          String?
+createdAt             DateTime       @default(now()) @map("created_at")
 }
 

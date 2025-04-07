@@ -9,7 +9,6 @@ import unzipper from 'unzipper'
 import { FileHtmlTable } from "../schemas/fileHtml.type";
 import { Archive } from '../schemas/archive.dto.type'
 
-
 export const maxArchiveSize: number = 2 * 1024 * 1024 * 1024;
 
 const prisma = new PrismaClient()
@@ -55,13 +54,15 @@ const addArchiveInDb = async (archiveName: string): Promise<string> => {
     return id
 }
 
-const deleteFile = async (filePath: string): Promise<void> => {
-    try{
-    await fsp.rm(filePath);
-    }catch(err){
-        throw new Error(`Error`)
+
+export const removeItem = async(itemPath: string): Promise<void> =>  {
+    try { 
+     await fsp.rm(itemPath, {recursive: true})
+    }catch(error) {
+     if (error instanceof Error) throw new Error(`Error with delete file: ${error.message}`)
+         else throw new Error(`Error with delete file: ${error}`)
     }
-}
+ }
 
 export const addArchive = async (archiveData: Archive) => {
     const { originalname, buffer }= archiveData;
@@ -75,7 +76,7 @@ export const addArchive = async (archiveData: Archive) => {
     try {
         return await addArchiveInDb(originalname)
     }catch{
-        await deleteFile(currentArchivePath)
+        await removeItem(currentArchivePath)
         throw createError(500,'Archive was not added in the database')
     }
 }
@@ -95,14 +96,6 @@ const extractZpi = (currentPathArchive: string, currentResourcePath: string): Pr
     })
 }
 
-export const removeItem = async(itemPath: string): Promise<void> =>  {
-   try { 
-    await fsp.rm(itemPath, {recursive: true})
-   }catch(error) {
-    if (error instanceof Error) throw new Error(`Error with delete file: ${error.message}`)
-        else throw new Error(`Error with delete file: ${error}`)
-   }
-}
 
 const errorHandlerAddFileHtmlInDb = async (filePath: string): Promise<void> => {
     try {
@@ -117,9 +110,9 @@ export const getFileNameWithoutExtension = (fileNameWithExtension: string): stri
     return fileName
 }
 export const unzipArchive = async(id : string): Promise<string> => {
-    const currentArchive: ArchiveTable = await prisma.archive.findUnique({
+    const currentArchive: ArchiveTable | null= await prisma.archive.findUnique({
         where: { id }
-    }) as ArchiveTable
+    }) 
     if (!currentArchive) throw createError(400, 'Archive with current id do not exist')
 
         const currentArchiveFormat: Format = Format.Archive;
@@ -140,16 +133,16 @@ export const unzipArchive = async(id : string): Promise<string> => {
 
           return prisma.$transaction(async (tx) => {
             try {
-                    const newFileHtml: FileHtmlTable = await tx.fileHtml.create({
+                    const newFileHtml: FileHtmlTable | null = await tx.fileHtml.create({
                         data: {
                             archiveId: id,
-                            filename: currentHtmlFilename,
+                            fileName: currentHtmlFilename,
                         }
-                    }) as FileHtmlTable
-                    const updateSuccessUnzippingInDb: ArchiveTable = await tx.archive.update({
+                    }) 
+                    const updateSuccessUnzippingInDb: ArchiveTable | null = await tx.archive.update({
                         where:{ id }, 
                         data:{ isUnzipping: true }
-                    }) as ArchiveTable
+                    })
                     return newFileHtml.id
                 }catch(transactionError){
                     await errorHandlerAddFileHtmlInDb(currentResourcePath)

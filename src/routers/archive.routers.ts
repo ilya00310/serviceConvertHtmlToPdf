@@ -72,7 +72,7 @@ archiveRouter.route('').post(upload.single('archive'),asyncHandler(async(req: Re
         return
     }
     const archiveId = await addArchive(result.data)
-    res.json({archiveId}).status(200)
+    res.status(200).json({archiveId})
 })
 )
 
@@ -108,5 +108,5 @@ archiveRouter.route('/unzip/:id').post(asyncHandler(async(req: Request, res: Res
     }
     const { id } = result.data
     const fileHtmlId: string =  await unzipArchive(id)
-    res.json({fileHtmlId}).status(200)
+    res.status(200).json({fileHtmlId})
 }))

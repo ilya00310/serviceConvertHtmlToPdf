@@ -4,6 +4,7 @@ import { archiveRouter } from './routers/archive.routers';
 import { fileHtmlRouter } from './routers/fileHtml.routers';
 import swaggerJsDoc from 'swagger-jsdoc'
 import swaggerUI from 'swagger-ui-express'
+import { pdfConversionLogRouter } from './routers/pdfConversionLog.routers';
 
 dotenv.config();
 const app = express();
@@ -18,12 +19,13 @@ const swaggerOptions = {
         },
         servers: [ { url: process.env.SERVER_URL } ],
     },
-    apis: ['./src/routers/archive.routers.ts','./src/routers/fileHtml.routers.ts']
+    apis: ['./src/routers/archive.routers.ts','./src/routers/fileHtml.routers.ts','./src/pdfConversionLog/.routers.ts']
 }
 const swaggerDocs = swaggerJsDoc(swaggerOptions)
 
 app.use('/api/archive',archiveRouter)
 app.use('/api/fileHtml', fileHtmlRouter)
+app.use('/api/pdfConversionLog', pdfConversionLogRouter)
 app.use('/api/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 

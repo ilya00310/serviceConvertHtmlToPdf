@@ -2,6 +2,6 @@
 export type FileHtmlTable = {
     id: string,
     archiveId: string,
-    filename: string,
+    fileName: string,
     isConversion: boolean
 }
